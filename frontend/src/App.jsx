@@ -4,7 +4,7 @@ import LoadingScreen from './components/LoadingScreen'
 import Report from './components/Report'
 
 function App() {
-  const [state, setState] = useState('idle') // idle, loading, report, error
+  const [state, setState] = useState('idle')
   const [report, setReport] = useState(null)
   const [error, setError] = useState('')
 
@@ -37,14 +37,18 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-[#0a0f0a] text-[#e8f0e8]">
       {state === 'idle' && <UrlInput onSubmit={handleAnalyze} />}
       {state === 'loading' && <LoadingScreen />}
       {state === 'report' && <Report data={report} onReset={handleReset} />}
       {state === 'error' && (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-          <p className="text-red-400 text-lg">{error}</p>
-          <button onClick={handleReset} className="text-zinc-400 underline cursor-pointer">Try again</button>
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+          <div className="bg-red-950/30 border border-red-900/40 rounded-2xl p-8 max-w-md text-center">
+            <p className="text-red-300 text-lg mb-4">{error}</p>
+            <button onClick={handleReset} className="text-[#7fba6a] underline cursor-pointer hover:text-[#a3d98f]">
+              Try again
+            </button>
+          </div>
         </div>
       )}
     </div>
