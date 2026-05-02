@@ -6,6 +6,10 @@ import FixList from './FixList'
 import Co2Section from './Co2Section'
 import { formatBytes } from '../utils/formatBytes'
 import LeafIcon from './LeafIcon'
+import Grade from './Grade'
+import Co2Breakdown from './Co2Breakdown'
+import Comparison from './Comparison'
+import Impact from './Impact'
 
 export default function Report({ data, onReset, onViewDashboard }) {
   const [saving, setSaving] = useState(false)
@@ -94,9 +98,13 @@ export default function Report({ data, onReset, onViewDashboard }) {
         <span>{allFixes.length} issues found</span>
       </div>
 
+      <div className="animate-fade-up stagger-1"><Grade wastePercent={data.wastePercent} /></div>
       <div className="animate-fade-up stagger-1"><SummaryCard data={data} /></div>
       <div className="animate-fade-up stagger-2"><BeforeAfterBar data={data} /></div>
+      {/* <div className="animate-fade-up stagger-2"><Comparison data={data} /></div> */}
       <div className="animate-fade-up stagger-3"><WasteBreakdown data={data} /></div>
+      {/* <div className="animate-fade-up stagger-3"><Co2Breakdown data={data} /></div> */}
+      <div className="animate-fade-up stagger-4"><Impact data={data} /></div>
       <div className="animate-fade-up stagger-4"><FixList fixes={allFixes} /></div>
       <div className="animate-fade-up stagger-5"><Co2Section data={data} /></div>
 
