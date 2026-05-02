@@ -1,23 +1,21 @@
 export default function Impact({ data }) {
-  const annualWasteCo2 = data.co2.annualCo2 - data.co2.annualCo2Slim // kg saved if fixed
+  const annualWasteCo2 = data.co2.annualCo2 - data.co2.annualCo2Slim
   const annualTotalCo2 = data.co2.annualCo2
 
   if (annualTotalCo2 <= 0) return null
 
-  // All per-year equivalents based on total site emissions
-  const trees = Math.max(1, Math.round(annualTotalCo2 / 21)) // avg tree absorbs ~21kg CO2/year
-  const flights = Math.round((annualTotalCo2 / 255) * 10) / 10 // Toronto to Vancouver ~255kg
-  const netflixHours = Math.round(annualTotalCo2 / 0.036) // ~36g per hour of streaming
-  const googleSearches = Math.round(annualTotalCo2 * 1000 / 0.2) // ~0.2g per search
-  const lightbulbDays = Math.round(annualTotalCo2 / 0.029) // 10W LED ~29g/day
-  const smartphoneYears = Math.round((annualTotalCo2 / 5) * 10) / 10 // ~5kg to charge a phone for a year
-  const boiledKettles = Math.round(annualTotalCo2 * 1000 / 15) // ~15g per kettle boil
+  const trees = Math.max(1, Math.round(annualTotalCo2 / 21))
+  const netflixHours = Math.round(annualTotalCo2 / 0.036)
+  const googleSearches = Math.round(annualTotalCo2 * 1000 / 0.2)
+  const lightbulbDays = Math.round(annualTotalCo2 / 0.106)
+  const smartphoneYears = Math.round((annualTotalCo2 / 2.4) * 10) / 10
+  const boiledKettles = Math.round(annualTotalCo2 * 1000 / 44)
 
   const equivalents = [
     { value: trees, unit: trees === 1 ? 'tree' : 'trees', detail: 'needed to absorb this CO₂ per year', icon: '🌳' },
     { value: netflixHours.toLocaleString(), unit: 'hours', detail: 'of Netflix streaming equivalent', icon: '📺' },
     { value: googleSearches.toLocaleString(), unit: 'Google searches', detail: 'worth of emissions', icon: '🔍' },
-    { value: lightbulbDays.toLocaleString(), unit: 'days', detail: 'of running an LED lightbulb', icon: '💡' },
+    { value: lightbulbDays.toLocaleString(), unit: 'days', detail: 'of running a 10W LED bulb', icon: '💡' },
     { value: smartphoneYears, unit: smartphoneYears === 1 ? 'year' : 'years', detail: 'of charging a smartphone', icon: '📱' },
     { value: boiledKettles.toLocaleString(), unit: 'kettles', detail: 'of water boiled', icon: '☕' },
   ]

@@ -1,6 +1,6 @@
 function calculateCo2(totalBytes, essentialBytes, monthlyPageviews = 10000) {
   const KWH_PER_GB = 0.81;
-  const CO2_PER_KWH = 442; // grams, global average grid intensity
+  const CO2_PER_KWH = 442; // grams, global average grid intensity (IEA)
 
   const totalGB = totalBytes / 1073741824;
   const essentialGB = essentialBytes / 1073741824;
@@ -20,8 +20,8 @@ function calculateCo2(totalBytes, essentialBytes, monthlyPageviews = 10000) {
     annualSavings: Math.round(annualSavings * 10) / 10,
     monthlyPageviews,
     equivalents: {
-      carKm: Math.round(annualSavings * 5), // ~200g CO2 per km
-      phoneCharges: Math.round(annualSavings * 136), // ~7.3g CO2 per charge
+      carKm: Math.round(annualSavings / 0.17), // avg car emits ~170g CO2 per km
+      phoneCharges: Math.round(annualSavings / 0.0024), // ~2.4g CO2 per charge
     },
   };
 }
