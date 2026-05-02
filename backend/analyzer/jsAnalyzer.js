@@ -25,28 +25,31 @@ function analyzeJs(jsCoverage, networkRequests) {
     const networkEntry = networkRequests.find(r => r.url === entry.url);
     const transferSize = networkEntry ? networkEntry.size : uncompressedTotal;
 
+    // If over 90% unused, count the entire file as waste
+    // The "used" portion is just library initialization, not code your page actually needs
+    const effectiveWastedPercent = wastedPercent > 0.9 ? 1 : wastedPercent;
+
     const totalBytes = transferSize;
-    const wastedBytes = Math.round(transferSize * wastedPercent);
+    const wastedBytes = Math.round(transferSize * effectiveWastedPercent);
     const usedBytes = totalBytes - wastedBytes;
-    const wastedPercentRounded = Math.round(wastedPercent * 100);
+    const wastedPercentRounded = Math.round(effectiveWastedPercent * 100);
 
     const fileName = cleanFileName(entry.url);
 
-    // Check if this is a known library
     const knownLib = KNOWN_LIBRARIES.find(lib => lib.pattern.test(entry.url) || lib.pattern.test(fileName));
 
     let fix = null;
     if (knownLib) {
-      if (wastedPercentRounded > 90) {
-        fix = `${knownLib.name} is loaded but almost entirely unused (${wastedPercentRounded}% waste). Remove it entirely. ${knownLib.suggestion}`;
+      if (wastedPercentRounded >= 100) {
+        fix = `${knownLib.name} is loaded but never actually used by your code. Remove it entirely. ${knownLib.suggestion}`;
       } else if (wastedPercentRounded > 50) {
         fix = `${knownLib.name}: ${wastedPercentRounded}% of the code never executed. ${knownLib.suggestion}`;
       } else if (wastedPercentRounded > 20) {
         fix = `${knownLib.name}: minor cleanup possible (${wastedPercentRounded}% unused). ${knownLib.suggestion}`;
       }
     } else {
-      if (wastedPercentRounded > 80) {
-        fix = `${wastedPercentRounded}% of this script never executed. If this is a first-party bundle, consider code splitting to load only what this page needs.`;
+      if (wastedPercentRounded >= 100) {
+        fix = `This script is loaded but essentially unused on this page. Remove it or lazy-load it only when needed.`;
       } else if (wastedPercentRounded > 50) {
         fix = `${wastedPercentRounded}% of this script is unused on this page. Consider splitting it into smaller, page-specific chunks.`;
       } else if (wastedPercentRounded > 20) {

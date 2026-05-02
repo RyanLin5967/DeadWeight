@@ -148,6 +148,7 @@ async function analyze(url) {
   const fontReport = analyzeFonts(networkRequests, fontData);
   const thirdPartyReport = analyzeThirdParty(networkRequests, siteDomain);
 
+  // Calculate totals
   const totalLoaded = networkRequests.reduce((sum, r) => sum + r.size, 0);
   const totalCssWaste = cssReport.reduce((sum, r) => sum + r.wastedBytes, 0);
   const totalJsWaste = jsReport.reduce((sum, r) => sum + r.wastedBytes, 0);
@@ -155,8 +156,28 @@ async function analyze(url) {
   const totalFontWaste = fontReport.filter(f => !f.used).reduce((sum, r) => sum + r.size, 0);
 
   const totalWaste = totalCssWaste + totalJsWaste + totalImageWaste + totalFontWaste;
+
+  // Calculate essential bytes as the sum of what's actually used
+  // rather than totalLoaded - waste, which is inconsistent
+  const cssUsed = cssReport.reduce((sum, r) => sum + r.usedBytes, 0);
+  const jsUsed = jsReport.reduce((sum, r) => sum + r.usedBytes, 0);
+  const imageUsed = imageReport.reduce((sum, r) => sum + (r.actualSize - r.estimatedSavings), 0);
+  const fontUsed = fontReport.filter(f => f.used).reduce((sum, r) => sum + r.size, 0);
+
+  // Add the HTML document itself and any non-CSS/JS/image/font requests
+  const analyzedUrls = new Set([
+    ...cssReport.map(r => r.url),
+    ...jsReport.map(r => r.url),
+    ...imageReport.map(r => r.url),
+    ...fontReport.map(r => r.url),
+  ]);
+  const otherBytes = networkRequests
+    .filter(r => !analyzedUrls.has(r.url))
+    .reduce((sum, r) => sum + r.size, 0);
+
+  const essentialBytes = cssUsed + jsUsed + imageUsed + fontUsed + otherBytes;
   const clampedWaste = Math.min(totalWaste, totalLoaded);
-  const essentialBytes = totalLoaded - clampedWaste;
+  const wastePercent = totalLoaded > 0 ? Math.round((clampedWaste / totalLoaded) * 100) : 0;
 
   const co2Report = calculateCo2(totalLoaded, essentialBytes);
 
@@ -166,7 +187,7 @@ async function analyze(url) {
     totalLoaded,
     essentialBytes,
     totalWaste: clampedWaste,
-    wastePercent: totalLoaded > 0 ? Math.round((clampedWaste / totalLoaded) * 100) : 0,
+    wastePercent,
     css: cssReport,
     js: jsReport,
     images: imageReport,
