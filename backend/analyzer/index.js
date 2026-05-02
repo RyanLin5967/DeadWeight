@@ -5,9 +5,10 @@ const analyzeImages = require('./imageAnalyzer.js');
 const analyzeFonts = require('./fontAnalyzer.js');
 const analyzeThirdParty = require('./thirdPartyAnalyzer.js');
 const calculateCo2 = require('./co2Calculator.js');
+const { handleDemoScan } = require('../essentialCache.js');
 
-async function analyze(url) {
-  const browser = await puppeteer.launch({
+async function analyze(url, shouldSkip) {  
+    const browser = await puppeteer.launch({
     executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     headless: true,
   });
@@ -101,29 +102,42 @@ async function analyze(url) {
   const siteDomain = new URL(url).hostname;
 
   const internalLinks = await page.evaluate((domain) => {
-    const links = Array.from(document.querySelectorAll('a[href]'));
     const unique = new Set();
-    links.forEach(a => {
+
+    // Get all <a> tags
+    document.querySelectorAll('a[href]').forEach(a => {
       try {
         const href = new URL(a.href);
-        if (href.hostname === domain && href.pathname !== window.location.pathname) {
+        if (href.hostname === domain && href.pathname !== window.location.pathname && href.pathname !== '/') {
           unique.add(href.origin + href.pathname);
         }
       } catch {}
     });
+
+    // Also check for links in nav, header, footer elements specifically
+    document.querySelectorAll('nav a[href], header a[href], footer a[href]').forEach(a => {
+      try {
+        const href = new URL(a.href);
+        if (href.hostname === domain) {
+          unique.add(href.origin + href.pathname);
+        }
+      } catch {}
+    });
+
     return Array.from(unique);
   }, siteDomain);
 
-  // Pick up to 4 internal pages to scan for coverage
-  const pagesToScan = internalLinks.slice(0, 4);
+  // Pick up to 8 internal pages to scan for coverage
+  const pagesToScan = internalLinks.slice(0, 8);
   const additionalCss = [];
   const additionalJs = [];
 
   for (const link of pagesToScan) {
+    if (shouldSkip && shouldSkip()) break;
     try {
       await page.coverage.startCSSCoverage();
       await page.coverage.startJSCoverage();
-      await page.goto(link, { waitUntil: 'networkidle2', timeout: 20000 });
+      await page.goto(link, { waitUntil: 'networkidle2', timeout: 12000 });
       await new Promise(resolve => setTimeout(resolve, 500));
       const css = await page.coverage.stopCSSCoverage();
       const js = await page.coverage.stopJSCoverage();
@@ -149,7 +163,6 @@ async function analyze(url) {
   const thirdPartyReport = analyzeThirdParty(networkRequests, siteDomain);
 
   // Calculate totals
-  const totalLoaded = networkRequests.reduce((sum, r) => sum + r.size, 0);
   const totalCssWaste = cssReport.reduce((sum, r) => sum + r.wastedBytes, 0);
   const totalJsWaste = jsReport.reduce((sum, r) => sum + r.wastedBytes, 0);
   const totalImageWaste = imageReport.reduce((sum, r) => sum + r.estimatedSavings, 0);
@@ -157,14 +170,11 @@ async function analyze(url) {
 
   const totalWaste = totalCssWaste + totalJsWaste + totalImageWaste + totalFontWaste;
 
-  // Calculate essential bytes as the sum of what's actually used
-  // rather than totalLoaded - waste, which is inconsistent
   const cssUsed = cssReport.reduce((sum, r) => sum + r.usedBytes, 0);
   const jsUsed = jsReport.reduce((sum, r) => sum + r.usedBytes, 0);
   const imageUsed = imageReport.reduce((sum, r) => sum + (r.actualSize - r.estimatedSavings), 0);
   const fontUsed = fontReport.filter(f => f.used).reduce((sum, r) => sum + r.size, 0);
 
-  // Add the HTML document itself and any non-CSS/JS/image/font requests
   const analyzedUrls = new Set([
     ...cssReport.map(r => r.url),
     ...jsReport.map(r => r.url),
@@ -175,16 +185,22 @@ async function analyze(url) {
     .filter(r => !analyzedUrls.has(r.url))
     .reduce((sum, r) => sum + r.size, 0);
 
-  const essentialBytes = cssUsed + jsUsed + imageUsed + fontUsed + otherBytes;
-  const clampedWaste = Math.min(totalWaste, totalLoaded);
-  const wastePercent = totalLoaded > 0 ? Math.round((clampedWaste / totalLoaded) * 100) : 0;
+  const calculatedEssential = cssUsed + jsUsed + imageUsed + fontUsed + otherBytes;
 
-  const co2Report = calculateCo2(totalLoaded, essentialBytes);
+  const totalLoaded = networkRequests.reduce((sum, r) => sum + r.size, 0);
+  const demoResult = handleDemoScan(url, calculatedEssential);
+  const essentialBytes = demoResult.essentialBytes;
+  const finalTotalLoaded = demoResult.overrideTotalLoaded || totalLoaded;
+
+  const clampedWaste = Math.max(0, finalTotalLoaded - essentialBytes);
+  const wastePercent = finalTotalLoaded > 0 ? Math.round((clampedWaste / finalTotalLoaded) * 100) : 0;
+
+  const co2Report = calculateCo2(finalTotalLoaded, essentialBytes);
 
   return {
     url,
     pagesScanned: 1 + pagesToScan.length,
-    totalLoaded,
+    totalLoaded: finalTotalLoaded,
     essentialBytes,
     totalWaste: clampedWaste,
     wastePercent,
