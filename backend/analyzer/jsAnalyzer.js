@@ -1,10 +1,20 @@
-function analyzeJs(jsCoverage) {
-  return jsCoverage.map(entry => {
-    const totalBytes = entry.text.length;
-    const usedBytes = entry.ranges.reduce((sum, range) => sum + (range.end - range.start), 0);
-    const wastedBytes = totalBytes - usedBytes;
-    const wastedPercent = totalBytes > 0 ? Math.round((wastedBytes / totalBytes) * 100) : 0;
-    const fileName = entry.url.split('/').pop().split('?')[0] || 'inline-script';
+const { cleanFileName, deduplicateNames } = require('../utils/cleanFileName.js');
+
+function analyzeJs(jsCoverage, networkRequests) {
+  const results = jsCoverage.map(entry => {
+    const uncompressedTotal = entry.text.length;
+    const uncompressedUsed = entry.ranges.reduce((sum, range) => sum + (range.end - range.start), 0);
+    const wastedPercent = uncompressedTotal > 0 ? (uncompressedTotal - uncompressedUsed) / uncompressedTotal : 0;
+
+    const networkEntry = networkRequests.find(r => r.url === entry.url);
+    const transferSize = networkEntry ? networkEntry.size : uncompressedTotal;
+
+    const totalBytes = transferSize;
+    const wastedBytes = Math.round(transferSize * wastedPercent);
+    const usedBytes = totalBytes - wastedBytes;
+    const wastedPercentRounded = Math.round(wastedPercent * 100);
+
+    const fileName = cleanFileName(entry.url);
 
     return {
       url: entry.url,
@@ -12,14 +22,16 @@ function analyzeJs(jsCoverage) {
       totalBytes,
       usedBytes,
       wastedBytes,
-      wastedPercent,
-      fix: wastedPercent > 50
-        ? `Consider code splitting. ${wastedPercent}% of this script never executed on this page.`
-        : wastedPercent > 20
-        ? `Minor JS cleanup possible. ${wastedPercent}% never executed.`
+      wastedPercent: wastedPercentRounded,
+      fix: wastedPercentRounded > 50
+        ? `Consider code splitting. ${wastedPercentRounded}% of this script never executed on this page.`
+        : wastedPercentRounded > 20
+        ? `Minor JS cleanup possible. ${wastedPercentRounded}% never executed.`
         : null,
     };
   }).filter(entry => entry.wastedBytes > 500);
+
+  return deduplicateNames(results);
 }
 
 module.exports = analyzeJs;

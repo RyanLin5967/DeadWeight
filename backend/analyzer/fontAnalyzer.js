@@ -1,4 +1,8 @@
-function analyzeFonts(networkRequests, usedFonts) {
+const { cleanFileName, deduplicateNames } = require('../utils/cleanFileName.js');
+
+function analyzeFonts(networkRequests, fontData) {
+  const { loadedFonts, computedFamilies } = fontData;
+
   const fontFiles = networkRequests.filter(r => {
     const url = r.url.toLowerCase();
     const contentType = r.contentType.toLowerCase();
@@ -10,17 +14,28 @@ function analyzeFonts(networkRequests, usedFonts) {
       url.endsWith('.eot');
   });
 
-  return fontFiles.map(font => {
-    const fileName = font.url.split('/').pop().split('?')[0];
+  const renderedFamilies = loadedFonts
+    .filter(f => f.status === 'loaded')
+    .map(f => f.family);
 
-    // Extract a rough font family name from the filename
-    // e.g., "Roboto-Bold.woff2" -> "roboto"
-    const namePart = fileName.split('.')[0]
-      .replace(/[-_](regular|bold|italic|light|medium|semibold|thin|black|extra|condensed|expanded)/gi, '')
-      .toLowerCase()
-      .trim();
+  const results = fontFiles.map(font => {
+    const fileName = cleanFileName(font.url);
+    const urlLower = font.url.toLowerCase();
 
-    const used = usedFonts.some(f => f.toLowerCase().includes(namePart));
+    const matchesRendered = renderedFamilies.some(family => {
+      if (family.length < 3) return false;
+      return urlLower.includes(family.replace(/\s+/g, ''));
+    });
+
+    const matchesComputed = computedFamilies.some(family => {
+      if (family.length < 3) return false;
+      return urlLower.includes(family.replace(/\s+/g, ''));
+    });
+
+    const rawFileName = font.url.split('/').pop().split('?')[0];
+    const isHashedFilename = /^[a-f0-9]{16,}\./i.test(rawFileName);
+
+    const used = matchesRendered || matchesComputed || isHashedFilename;
 
     return {
       url: font.url,
@@ -28,10 +43,12 @@ function analyzeFonts(networkRequests, usedFonts) {
       size: font.size,
       used,
       fix: !used
-        ? `This font is loaded but never rendered on this page. Remove it to save ${formatBytes(font.size)}.`
+        ? `This font is loaded but not rendered on this page. Remove it to save ${formatBytes(font.size)}.`
         : null,
     };
   });
+
+  return deduplicateNames(results);
 }
 
 function formatBytes(bytes) {

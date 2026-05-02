@@ -1,5 +1,7 @@
+const { cleanFileName, deduplicateNames } = require('../utils/cleanFileName.js');
+
 function analyzeImages(imageData, networkRequests) {
-  return imageData
+  const results = imageData
     .filter(img => img.naturalWidth > 0 && img.displayWidth > 0)
     .map(img => {
       const networkEntry = networkRequests.find(r => r.url === img.src);
@@ -11,6 +13,7 @@ function analyzeImages(imageData, networkRequests) {
       const estimatedOptimalSize = Math.round(actualSize / scaleFactor);
       const estimatedSavings = scaleFactor > 2 ? actualSize - estimatedOptimalSize : 0;
 
+      const fileName = cleanFileName(img.src);
       const format = img.src.split('.').pop().split('?')[0].toLowerCase();
       const isOldFormat = ['png', 'jpg', 'jpeg', 'bmp'].includes(format);
 
@@ -25,7 +28,7 @@ function analyzeImages(imageData, networkRequests) {
 
       return {
         url: img.src,
-        fileName: img.src.split('/').pop().split('?')[0] || 'image',
+        fileName,
         actualSize,
         displayDimensions: `${img.displayWidth}×${img.displayHeight}`,
         naturalDimensions: `${img.naturalWidth}×${img.naturalHeight}`,
@@ -36,6 +39,8 @@ function analyzeImages(imageData, networkRequests) {
       };
     })
     .filter(entry => entry !== null && (entry.estimatedSavings > 1000 || entry.fix));
+
+  return deduplicateNames(results);
 }
 
 function formatBytes(bytes) {
