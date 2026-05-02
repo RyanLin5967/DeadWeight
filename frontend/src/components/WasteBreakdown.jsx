@@ -8,6 +8,20 @@ export default function WasteBreakdown({ data }) {
     { name: 'Fonts', icon: '🔤', used: data.fonts.filter(f => f.used).reduce((s, r) => s + r.size, 0), wasted: data.fonts.filter(f => !f.used).reduce((s, r) => s + r.size, 0) },
   ].filter(c => c.used + c.wasted > 0)
 
+  const hasWaste = categories.some(c => c.wasted > 0)
+
+  if (!hasWaste) {
+    return (
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-[#c8e0c8]">Waste by category</h2>
+        <div className="bg-[#111a11] border border-[#1e2e1e] rounded-2xl p-8 text-center">
+          <p className="text-[#7fba6a] text-lg">🌿 No waste detected</p>
+          <p className="text-[#5a6e5a] text-sm mt-2">This page only loads what it actually uses. Well done.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mb-8">
       <h2 className="text-xl font-semibold mb-4 text-[#c8e0c8]">Waste by category</h2>
