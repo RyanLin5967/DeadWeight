@@ -5,6 +5,7 @@ import WasteBreakdown from './WasteBreakdown'
 import FixList from './FixList'
 import Co2Section from './Co2Section'
 import { formatBytes } from '../utils/formatBytes'
+import LeafIcon from './LeafIcon'
 
 export default function Report({ data, onReset, onViewDashboard }) {
   const [saving, setSaving] = useState(false)
@@ -51,10 +52,7 @@ export default function Report({ data, onReset, onViewDashboard }) {
     <div className="max-w-4xl mx-auto px-4 py-12">
       <div className="flex items-center justify-between mb-6 animate-fade-up">
         <div className="flex items-center gap-3">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7fba6a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1.14-2.8a8.35 8.35 0 0 0 3.15.8 9.43 9.43 0 0 0 7-3A9.43 9.43 0 0 0 20 10a18.45 18.45 0 0 0 .5-7.5 18.45 18.45 0 0 0-7.5.5" />
-            <path d="M12 12l-5 9.5" />
-          </svg>
+          <LeafIcon size={48} />
           <div>
             <h1 className="text-2xl font-bold text-[#e8f0e8]">Dead<span className="text-[#7fba6a]">Weight</span></h1>
             <p className="text-[#5a6e5a] text-sm break-all mt-0.5">{data.url}</p>

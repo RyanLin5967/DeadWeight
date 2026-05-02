@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import LeafIcon from './LeafIcon'
 import { formatBytes } from '../utils/formatBytes'
 
 export default function UrlInput({ onSubmit, onViewDashboard }) {
@@ -43,10 +44,7 @@ export default function UrlInput({ onSubmit, onViewDashboard }) {
 
       <div className="relative z-10 flex flex-col items-center">
         <div className="mb-6 animate-fade-up">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7fba6a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1.14-2.8a8.35 8.35 0 0 0 3.15.8 9.43 9.43 0 0 0 7-3A9.43 9.43 0 0 0 20 10a18.45 18.45 0 0 0 .5-7.5 18.45 18.45 0 0 0-7.5.5" />
-            <path d="M12 12l-5 9.5" />
-          </svg>
+          <LeafIcon size={48} />
         </div>
 
         <h1 className="text-6xl font-bold tracking-tight mb-3 animate-fade-up text-[#e8f0e8]">
