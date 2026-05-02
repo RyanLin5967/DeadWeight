@@ -6,6 +6,11 @@ function analyzeFonts(networkRequests, fontData) {
   const fontFiles = networkRequests.filter(r => {
     const url = r.url.toLowerCase();
     const contentType = r.contentType.toLowerCase();
+
+    // Must be an actual font file, not a CSS file that mentions fonts
+    if (contentType.includes('css') || url.endsWith('.css')) return false;
+    if (contentType.includes('javascript') || url.endsWith('.js')) return false;
+
     return contentType.includes('font') ||
       url.endsWith('.woff2') ||
       url.endsWith('.woff') ||
@@ -16,26 +21,36 @@ function analyzeFonts(networkRequests, fontData) {
 
   const renderedFamilies = loadedFonts
     .filter(f => f.status === 'loaded')
-    .map(f => f.family);
+    .map(f => f.family.toLowerCase().replace(/['"]/g, '').replace(/\s+/g, ''));
+
+  const unrenderedFamilies = loadedFonts
+    .filter(f => f.status === 'unloaded')
+    .map(f => f.family.toLowerCase().replace(/['"]/g, '').replace(/\s+/g, ''));
 
   const results = fontFiles.map(font => {
     const fileName = cleanFileName(font.url);
-    const urlLower = font.url.toLowerCase();
+    // Normalize URL — remove hyphens and spaces for matching
+    const urlNormalized = font.url.toLowerCase().replace(/[-_\s]/g, '');
 
     const matchesRendered = renderedFamilies.some(family => {
       if (family.length < 3) return false;
-      return urlLower.includes(family.replace(/\s+/g, ''));
+      return urlNormalized.includes(family);
     });
 
-    const matchesComputed = computedFamilies.some(family => {
+    const matchesUnrendered = unrenderedFamilies.some(family => {
       if (family.length < 3) return false;
-      return urlLower.includes(family.replace(/\s+/g, ''));
+      return urlNormalized.includes(family);
     });
 
-    const rawFileName = font.url.split('/').pop().split('?')[0];
-    const isHashedFilename = /^[a-f0-9]{16,}\./i.test(rawFileName);
-
-    const used = matchesRendered || matchesComputed || isHashedFilename;
+    let used;
+    if (matchesRendered) {
+      used = true;
+    } else if (matchesUnrendered) {
+      used = false;
+    } else {
+      // Can't determine — assume used
+      used = true;
+    }
 
     return {
       url: font.url,

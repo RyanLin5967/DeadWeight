@@ -1,5 +1,15 @@
 const { cleanFileName, deduplicateNames } = require('../utils/cleanFileName.js');
 
+const KNOWN_STYLESHEETS = [
+  { pattern: /bootstrap/i, name: 'Bootstrap CSS', suggestion: 'Use only the Bootstrap components you need, or replace with a few lines of custom CSS for your layout.' },
+  { pattern: /font-?awesome/i, name: 'Font Awesome', suggestion: 'Loading the full icon library for a few icons. Use individual SVG icons instead, or import only the icons you need.' },
+  { pattern: /tailwind/i, name: 'Tailwind CSS', suggestion: 'Ensure PurgeCSS is configured to remove unused utility classes in production builds.' },
+  { pattern: /bulma/i, name: 'Bulma', suggestion: 'Import only the Bulma modules you use (e.g., @import "bulma/sass/grid") instead of the full framework.' },
+  { pattern: /materialize/i, name: 'Materialize CSS', suggestion: 'Consider replacing with a lighter framework or custom CSS if only using a few components.' },
+  { pattern: /animate\.css/i, name: 'Animate.css', suggestion: 'Only import the animations you use, not the full library.' },
+  { pattern: /normalize/i, name: 'Normalize.css', suggestion: 'Modern browsers need less normalization. Consider replacing with a minimal CSS reset.' },
+];
+
 function analyzeCss(cssCoverage, networkRequests) {
   const results = cssCoverage.map(entry => {
     const uncompressedTotal = entry.text.length;
@@ -16,6 +26,28 @@ function analyzeCss(cssCoverage, networkRequests) {
 
     const fileName = cleanFileName(entry.url);
 
+    // Check if this is a known stylesheet
+    const knownLib = KNOWN_STYLESHEETS.find(lib => lib.pattern.test(entry.url) || lib.pattern.test(fileName));
+
+    let fix = null;
+    if (knownLib) {
+      if (wastedPercentRounded > 90) {
+        fix = `${knownLib.name}: ${wastedPercentRounded}% of this stylesheet is unused. ${knownLib.suggestion}`;
+      } else if (wastedPercentRounded > 50) {
+        fix = `${knownLib.name}: ${wastedPercentRounded}% unused on this page. ${knownLib.suggestion}`;
+      } else if (wastedPercentRounded > 20) {
+        fix = `${knownLib.name}: minor cleanup possible (${wastedPercentRounded}% unused). ${knownLib.suggestion}`;
+      }
+    } else {
+      if (wastedPercentRounded > 80) {
+        fix = `${wastedPercentRounded}% of this stylesheet is unused. Audit your CSS rules — most selectors on this page don't match any elements.`;
+      } else if (wastedPercentRounded > 50) {
+        fix = `${wastedPercentRounded}% of this stylesheet is unused on this page. Consider splitting styles per page or removing dead rules.`;
+      } else if (wastedPercentRounded > 20) {
+        fix = `Minor CSS cleanup possible — ${wastedPercentRounded}% of rules are unused on this page.`;
+      }
+    }
+
     return {
       url: entry.url,
       fileName,
@@ -23,11 +55,7 @@ function analyzeCss(cssCoverage, networkRequests) {
       usedBytes,
       wastedBytes,
       wastedPercent: wastedPercentRounded,
-      fix: wastedPercentRounded > 50
-        ? `Audit and purge unused CSS rules. ${wastedPercentRounded}% of this stylesheet is not used on this page.`
-        : wastedPercentRounded > 20
-        ? `Minor CSS cleanup possible. ${wastedPercentRounded}% is unused.`
-        : null,
+      fix,
     };
   }).filter(entry => entry.wastedBytes > 500);
 
