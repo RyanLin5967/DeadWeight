@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatBytes } from '../utils/formatBytes'
 
-export default function UrlInput({ onSubmit }) {
+export default function UrlInput({ onSubmit, onViewDashboard }) {
   const [url, setUrl] = useState('')
+  const [sites, setSites] = useState([])
+
+  useEffect(() => {
+    fetch('http://localhost:3001/sites')
+      .then(res => res.json())
+      .then(data => setSites(data))
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -14,7 +23,6 @@ export default function UrlInput({ onSubmit }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-[#1a3a1a] rounded-full blur-[120px] opacity-40" />
         <div className="absolute bottom-20 right-10 w-80 h-80 bg-[#0d2a0d] rounded-full blur-[140px] opacity-30" />
@@ -22,7 +30,6 @@ export default function UrlInput({ onSubmit }) {
       </div>
 
       <div className="relative z-10 flex flex-col items-center">
-        {/* Leaf icon */}
         <div className="mb-6 animate-fade-up">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7fba6a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1.14-2.8a8.35 8.35 0 0 0 3.15.8 9.43 9.43 0 0 0 7-3A9.43 9.43 0 0 0 20 10a18.45 18.45 0 0 0 .5-7.5 18.45 18.45 0 0 0-7.5.5" />
@@ -63,6 +70,33 @@ export default function UrlInput({ onSubmit }) {
           <span>🖼️ Image analysis</span>
           <span>🌱 CO₂ impact</span>
         </div>
+
+        {/* Tracked sites */}
+        {sites.length > 0 && (
+          <div className="mt-16 w-full max-w-xl animate-fade-up stagger-5">
+            <h3 className="text-[#5a6e5a] text-xs uppercase tracking-wider mb-3">Tracked sites</h3>
+            <div className="space-y-2">
+              {sites.map((site) => (
+                <button
+                  key={site.key}
+                  onClick={() => onViewDashboard(site.url)}
+                  className="w-full flex items-center justify-between bg-[#111a11] border border-[#1e2e1e] rounded-xl px-4 py-3 hover:border-[#2a3d2a] hover:bg-[#151f15] transition-all cursor-pointer text-left"
+                >
+                  <div>
+                    <p className="text-[#c8e0c8] text-sm">{site.key}</p>
+                    <p className="text-[#4a5e4a] text-xs mt-0.5">{site.snapshotCount} snapshot{site.snapshotCount > 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-medium ${site.latest.wastePercent > 30 ? 'text-[#d9735a]' : site.latest.wastePercent > 10 ? 'text-[#d4a843]' : 'text-[#7fba6a]'}`}>
+                      {site.latest.wastePercent}% waste
+                    </p>
+                    <p className="text-[#4a5e4a] text-xs">{formatBytes(site.latest.totalLoaded)}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

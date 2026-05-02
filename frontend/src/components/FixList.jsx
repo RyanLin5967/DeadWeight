@@ -1,26 +1,6 @@
 import { formatBytes } from '../utils/formatBytes'
 
-export default function FixList({ data }) {
-  const fixes = []
-
-  data.css.forEach(item => {
-    if (item.fix) fixes.push({ type: 'css', fileName: item.fileName, savings: item.wastedBytes, fix: item.fix })
-  })
-  data.js.forEach(item => {
-    if (item.fix) fixes.push({ type: 'js', fileName: item.fileName, savings: item.wastedBytes, fix: item.fix })
-  })
-  data.images.forEach(item => {
-    if (item.fix) fixes.push({ type: 'image', fileName: item.fileName, savings: item.estimatedSavings, fix: item.fix })
-  })
-  data.fonts.forEach(item => {
-    if (item.fix) fixes.push({ type: 'font', fileName: item.fileName, savings: item.size, fix: item.fix })
-  })
-  data.thirdParty.fixes.forEach(fix => {
-    fixes.push({ type: 'third-party', fileName: 'Third-party scripts', savings: 0, fix })
-  })
-
-  fixes.sort((a, b) => b.savings - a.savings)
-
+export default function FixList({ fixes }) {
   const icons = { css: '🎨', js: '⚙️', image: '🖼️', font: '🔤', 'third-party': '🌐' }
   const typeColors = {
     css: 'border-l-[#d4a843]',
@@ -44,13 +24,16 @@ export default function FixList({ data }) {
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4 text-[#c8e0c8]">
+      <h2 className="text-xl font-semibold mb-2 text-[#c8e0c8]">
         Recommendations
         <span className="text-[#5a6e5a] text-sm font-normal ml-2">({fixes.length} issues)</span>
       </h2>
-      <div className="space-y-2.5">
-        {fixes.slice(0, 15).map((item, i) => (
-          <div key={i} className={`bg-[#111a11] border border-[#1e2e1e] border-l-4 ${typeColors[item.type]} rounded-xl p-4`}>
+      <div className="space-y-2.5 mt-4">
+        {fixes.slice(0, 15).map((item) => (
+          <div
+            key={item.id}
+            className={`bg-[#111a11] border border-[#1e2e1e] border-l-4 ${typeColors[item.type]} rounded-xl p-4`}
+          >
             <div className="flex items-start gap-3">
               <span className="text-lg mt-0.5">{icons[item.type]}</span>
               <div className="flex-1 min-w-0">

@@ -1,0 +1,92 @@
+{
+  "claude.ai": {
+    "url": "https://claude.ai",
+    "snapshots": [
+      {
+        "timestamp": "2026-05-02T16:41:40.691Z",
+        "totalLoaded": 4500694,
+        "essentialBytes": 1233852,
+        "totalWaste": 3266842,
+        "wastePercent": 73,
+        "totalRequests": 63,
+        "co2PerVisit": 1.5,
+        "annualCo2": 180.1,
+        "cssWaste": 82083,
+        "jsWaste": 2901076,
+        "imageWaste": 0,
+        "fontWaste": 283683,
+        "thirdPartyBytes": 4024212,
+        "issueCount": 44
+      },
+      {
+        "timestamp": "2026-05-02T16:43:18.936Z",
+        "totalLoaded": 4497847,
+        "essentialBytes": 1234188,
+        "totalWaste": 3263659,
+        "wastePercent": 73,
+        "totalRequests": 63,
+        "co2PerVisit": 1.5,
+        "annualCo2": 180,
+        "cssWaste": 82482,
+        "jsWaste": 2897783,
+        "imageWaste": 0,
+        "fontWaste": 283394,
+        "thirdPartyBytes": 4023624,
+        "issueCount": 44
+      },
+      {
+        "timestamp": "2026-05-02T16:43:19.156Z",
+        "totalLoaded": 4497847,
+        "essentialBytes": 1234188,
+        "totalWaste": 3263659,
+        "wastePercent": 73,
+        "totalRequests": 63,
+        "co2PerVisit": 1.5,
+        "annualCo2": 180,
+        "cssWaste": 82482,
+        "jsWaste": 2897783,
+        "imageWaste": 0,
+        "fontWaste": 283394,
+        "thirdPartyBytes": 4023624,
+        "issueCount": 44
+      }
+    ]
+  },
+  "atlas-demo-b8g.pages.dev": {
+    "url": "https://atlas-demo-b8g.pages.dev/",
+    "snapshots": [
+      {
+        "timestamp": "2026-05-02T16:57:26.510Z",
+        "totalLoaded": 4837384,
+        "essentialBytes": 116985,
+        "totalWaste": 4720399,
+        "wastePercent": 98,
+        "totalRequests": 13,
+        "co2PerVisit": 1.61,
+        "annualCo2": 193.6,
+        "cssWaste": 57842,
+        "jsWaste": 144280,
+        "imageWaste": 4367335,
+        "fontWaste": 150942,
+        "thirdPartyBytes": 4832371,
+        "issueCount": 12
+      },
+      {
+        "timestamp": "2026-05-02T17:12:02.807Z",
+        "totalLoaded": 23108,
+        "essentialBytes": 23108,
+        "totalWaste": 0,
+        "wastePercent": 0,
+        "totalRequests": 3,
+        "co2PerVisit": 0.01,
+        "annualCo2": 0.9,
+        "cssWaste": 0,
+        "jsWaste": 0,
+        "imageWaste": 0,
+        "fontWaste": 0,
+        "thirdPartyBytes": 21708,
+        "issueCount": 0
+      }
+    ]
+  }
+}

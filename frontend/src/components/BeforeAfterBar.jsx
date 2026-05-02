@@ -24,7 +24,7 @@ export default function BeforeAfterBar({ data }) {
           {segments.map((seg) => (
             <div
               key={seg.label}
-              className="h-full animate-grow transition-all"
+              className="h-full animate-grow"
               style={{
                 width: `${(seg.bytes / data.totalLoaded) * 100}%`,
                 backgroundColor: seg.color,
