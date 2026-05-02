@@ -9,6 +9,7 @@ const messages = [
   { text: 'Detecting unused fonts...', icon: '🔤' },
   { text: 'Categorizing third-party scripts...', icon: '🌐' },
   { text: 'Calculating CO₂ emissions...', icon: '🌱' },
+  { text: 'Scanning linked pages for shared code...', icon: '🔗' },
   { text: 'Building your report...', icon: '📊' },
 ]
 

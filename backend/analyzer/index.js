@@ -50,10 +50,10 @@ async function analyze(url) {
     }
   });
 
+  // --- Scan the main page ---
   await page.coverage.startCSSCoverage();
   await page.coverage.startJSCoverage();
 
-  // Navigate — catch timeout but still continue with whatever loaded
   try {
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
   } catch (err) {
@@ -61,7 +61,6 @@ async function analyze(url) {
       await browser.close();
       throw err;
     }
-    // Timeout is fine — we still have partial data, keep going
   }
 
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -69,6 +68,7 @@ async function analyze(url) {
   const cssCoverage = await page.coverage.stopCSSCoverage();
   const jsCoverage = await page.coverage.stopJSCoverage();
 
+  // Get image and font data from the main page
   const imageData = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('img')).map(img => ({
       src: img.src,
@@ -79,17 +79,14 @@ async function analyze(url) {
     }));
   });
 
-  // Query DOM for used fonts — use document.fonts API for accurate data
   const fontData = await page.evaluate(() => {
     const loadedFonts = [];
     document.fonts.forEach(font => {
       loadedFonts.push({
         family: font.family.replace(/['"]/g, '').toLowerCase(),
-        status: font.status, // 'loaded' means it was actually used and rendered
+        status: font.status,
       });
     });
-
-    // Also get computed styles as a fallback
     const computedFamilies = new Set();
     document.querySelectorAll('*').forEach(el => {
       const fontFamily = getComputedStyle(el).fontFamily;
@@ -97,21 +94,56 @@ async function analyze(url) {
         computedFamilies.add(f.trim().replace(/['"]/g, '').toLowerCase());
       });
     });
-
-    return {
-      loadedFonts,
-      computedFamilies: Array.from(computedFamilies),
-    };
+    return { loadedFonts, computedFamilies: Array.from(computedFamilies) };
   });
+
+  // --- Find internal links and scan a few more pages ---
+  const siteDomain = new URL(url).hostname;
+
+  const internalLinks = await page.evaluate((domain) => {
+    const links = Array.from(document.querySelectorAll('a[href]'));
+    const unique = new Set();
+    links.forEach(a => {
+      try {
+        const href = new URL(a.href);
+        if (href.hostname === domain && href.pathname !== window.location.pathname) {
+          unique.add(href.origin + href.pathname);
+        }
+      } catch {}
+    });
+    return Array.from(unique);
+  }, siteDomain);
+
+  // Pick up to 4 internal pages to scan for coverage
+  const pagesToScan = internalLinks.slice(0, 4);
+  const additionalCss = [];
+  const additionalJs = [];
+
+  for (const link of pagesToScan) {
+    try {
+      await page.coverage.startCSSCoverage();
+      await page.coverage.startJSCoverage();
+      await page.goto(link, { waitUntil: 'networkidle2', timeout: 20000 });
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const css = await page.coverage.stopCSSCoverage();
+      const js = await page.coverage.stopJSCoverage();
+      additionalCss.push(...css);
+      additionalJs.push(...js);
+    } catch {
+      // Skip pages that fail
+    }
+  }
 
   await client.detach();
   await browser.close();
 
-  const siteDomain = new URL(url).hostname;
+  // --- Merge coverage data across all scanned pages ---
+  const mergedCss = mergeCoverage(cssCoverage, additionalCss);
+  const mergedJs = mergeCoverage(jsCoverage, additionalJs);
 
-  // Pass network requests to CSS and JS analyzers so they can use real transfer sizes
-  const cssReport = analyzeCss(cssCoverage, networkRequests);
-  const jsReport = analyzeJs(jsCoverage, networkRequests);
+  // Run all analyzers with merged coverage
+  const cssReport = analyzeCss(mergedCss, networkRequests);
+  const jsReport = analyzeJs(mergedJs, networkRequests);
   const imageReport = analyzeImages(imageData, networkRequests);
   const fontReport = analyzeFonts(networkRequests, fontData);
   const thirdPartyReport = analyzeThirdParty(networkRequests, siteDomain);
@@ -123,8 +155,6 @@ async function analyze(url) {
   const totalFontWaste = fontReport.filter(f => !f.used).reduce((sum, r) => sum + r.size, 0);
 
   const totalWaste = totalCssWaste + totalJsWaste + totalImageWaste + totalFontWaste;
-
-  // Clamp so waste never exceeds total loaded
   const clampedWaste = Math.min(totalWaste, totalLoaded);
   const essentialBytes = totalLoaded - clampedWaste;
 
@@ -132,6 +162,7 @@ async function analyze(url) {
 
   return {
     url,
+    pagesScanned: 1 + pagesToScan.length,
     totalLoaded,
     essentialBytes,
     totalWaste: clampedWaste,
@@ -144,6 +175,51 @@ async function analyze(url) {
     co2: co2Report,
     totalRequests: networkRequests.length,
   };
+}
+
+// Merge coverage from multiple pages — union of all used ranges per file
+function mergeCoverage(primary, additional) {
+  // Build a map of URL -> coverage entry
+  const merged = new Map();
+
+  // Start with primary page coverage
+  for (const entry of primary) {
+    merged.set(entry.url, {
+      url: entry.url,
+      text: entry.text,
+      ranges: [...entry.ranges],
+    });
+  }
+
+  // Union in additional page coverage
+  for (const entry of additional) {
+    if (merged.has(entry.url)) {
+      // Same file seen on another page — union the ranges
+      const existing = merged.get(entry.url);
+      existing.ranges = unionRanges(existing.ranges, entry.ranges);
+    }
+    // If we haven't seen this file on the main page, skip it —
+    // we only care about files the main page loaded
+  }
+
+  return Array.from(merged.values());
+}
+
+// Union two arrays of {start, end} ranges into a minimal set of non-overlapping ranges
+function unionRanges(rangesA, rangesB) {
+  const all = [...rangesA, ...rangesB].sort((a, b) => a.start - b.start);
+  if (all.length === 0) return [];
+
+  const result = [all[0]];
+  for (let i = 1; i < all.length; i++) {
+    const last = result[result.length - 1];
+    if (all[i].start <= last.end) {
+      last.end = Math.max(last.end, all[i].end);
+    } else {
+      result.push({ ...all[i] });
+    }
+  }
+  return result;
 }
 
 module.exports = analyze;

@@ -87,7 +87,9 @@ export default function Report({ data, onReset, onViewDashboard }) {
       </button>
 
       <div className="flex items-center gap-3 mb-8 text-[#5a6e5a] text-sm animate-fade-up stagger-1">
-        <span>{data.totalRequests} requests</span>
+        <span>{data.pagesScanned} page{data.pagesScanned > 1 ? 's' : ''} scanned</span>
+        <span>·</span>
+        <span>{data.totalRequests} requests</span>        
         <span>·</span>
         <span>{allFixes.length} issues found</span>
       </div>
