@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const analyze = require('./analyzer/index.js');
-const { saveSnapshot, getSnapshots, getAllSites } = require('./store.js');
+const { saveSnapshot, getSnapshots, getAllSites, deleteSite } = require('./store.js');
 
 const app = express();
 app.use(cors());
@@ -51,6 +51,15 @@ app.get('/snapshots', (req, res) => {
 
 app.get('/sites', (req, res) => {
   res.json(getAllSites());
+});
+
+app.delete('/sites', (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ error: 'Missing url parameter' });
+  }
+  const deleted = deleteSite(url);
+  res.json({ deleted });
 });
 
 app.listen(3001, () => {

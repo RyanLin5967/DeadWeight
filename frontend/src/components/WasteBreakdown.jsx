@@ -14,6 +14,7 @@ export default function WasteBreakdown({ data }) {
       <div className="bg-[#111a11] border border-[#1e2e1e] rounded-2xl p-6 space-y-5">
         {categories.map((cat) => {
           const total = cat.used + cat.wasted
+          const usedPercent = total > 0 ? (cat.used / total) * 100 : 0
           const wastedPercent = total > 0 ? Math.round((cat.wasted / total) * 100) : 0
           return (
             <div key={cat.name}>
@@ -24,8 +25,14 @@ export default function WasteBreakdown({ data }) {
                 </span>
               </div>
               <div className="w-full h-2.5 bg-[#0a120a] rounded-full overflow-hidden flex">
-                <div className="bg-[#7fba6a] h-full rounded-full animate-grow" style={{ width: `${(cat.used / total) * 100}%` }} />
-                <div className="bg-[#d9735a] h-full rounded-full animate-grow" style={{ width: `${(cat.wasted / total) * 100}%` }} />
+                <div
+                  className="bg-[#7fba6a] h-full animate-grow"
+                  style={{ width: `${usedPercent}%` }}
+                />
+                <div
+                  className="bg-[#d9735a] h-full animate-grow"
+                  style={{ width: `${100 - usedPercent}%` }}
+                />
               </div>
             </div>
           )

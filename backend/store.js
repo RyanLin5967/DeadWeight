@@ -77,4 +77,15 @@ function getAllSites() {
   }));
 }
 
-module.exports = { saveSnapshot, getSnapshots, getAllSites };
+function deleteSite(url) {
+  const store = loadStore();
+  const key = getKey(url);
+  if (store[key]) {
+    delete store[key];
+    saveStore(store);
+    return true;
+  }
+  return false;
+}
+
+module.exports = { saveSnapshot, getSnapshots, getAllSites, deleteSite };

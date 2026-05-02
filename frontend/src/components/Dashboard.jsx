@@ -183,20 +183,26 @@ export default function Dashboard({ url, onReset, onRescan }) {
                 <span>{snap.wastePercent}% waste · {snap.issueCount} issues</span>
               </div>
               <div className="w-full h-3 bg-[#0a120a] rounded-full overflow-hidden flex">
-                <div className="bg-[#d4a843] h-full" style={{ width: `${(snap.cssWaste / snap.totalLoaded) * 100}%` }} />
-                <div className="bg-[#d98a5a] h-full" style={{ width: `${(snap.jsWaste / snap.totalLoaded) * 100}%` }} />
-                <div className="bg-[#d9735a] h-full" style={{ width: `${(snap.imageWaste / snap.totalLoaded) * 100}%` }} />
-                <div className="bg-[#a87fd9] h-full" style={{ width: `${(snap.fontWaste / snap.totalLoaded) * 100}%` }} />
-                <div className="bg-[#5a9ed9] h-full" style={{ width: `${(snap.thirdPartyBytes / snap.totalLoaded) * 100}%` }} />
+                {snap.totalWaste > 0 ? (
+                  <>
+                    <div className="bg-[#7fba6a] h-full" style={{ width: `${((snap.totalLoaded - snap.totalWaste) / snap.totalLoaded) * 100}%` }} />
+                    <div className="bg-[#d4a843] h-full" style={{ width: `${(snap.cssWaste / snap.totalLoaded) * 100}%` }} />
+                    <div className="bg-[#d98a5a] h-full" style={{ width: `${(snap.jsWaste / snap.totalLoaded) * 100}%` }} />
+                    <div className="bg-[#d9735a] h-full" style={{ width: `${(snap.imageWaste / snap.totalLoaded) * 100}%` }} />
+                    <div className="bg-[#a87fd9] h-full" style={{ width: `${(snap.fontWaste / snap.totalLoaded) * 100}%` }} />
+                  </>
+                ) : (
+                  <div className="bg-[#7fba6a] h-full w-full" />
+                )}
               </div>
             </div>
           ))}
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#6a8a6a]">
+            <span><span className="inline-block w-2 h-2 rounded-sm bg-[#7fba6a] mr-1" />Essential</span>
             <span><span className="inline-block w-2 h-2 rounded-sm bg-[#d4a843] mr-1" />CSS</span>
             <span><span className="inline-block w-2 h-2 rounded-sm bg-[#d98a5a] mr-1" />JS</span>
             <span><span className="inline-block w-2 h-2 rounded-sm bg-[#d9735a] mr-1" />Images</span>
             <span><span className="inline-block w-2 h-2 rounded-sm bg-[#a87fd9] mr-1" />Fonts</span>
-            <span><span className="inline-block w-2 h-2 rounded-sm bg-[#5a9ed9] mr-1" />Third-party</span>
           </div>
         </div>
       </div>

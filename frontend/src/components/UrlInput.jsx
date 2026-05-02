@@ -5,12 +5,14 @@ export default function UrlInput({ onSubmit, onViewDashboard }) {
   const [url, setUrl] = useState('')
   const [sites, setSites] = useState([])
 
-  useEffect(() => {
+  const loadSites = () => {
     fetch('http://localhost:3001/sites')
       .then(res => res.json())
       .then(data => setSites(data))
       .catch(() => {})
-  }, [])
+  }
+
+  useEffect(() => { loadSites() }, [])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -19,6 +21,16 @@ export default function UrlInput({ onSubmit, onViewDashboard }) {
       finalUrl = 'https://' + finalUrl
     }
     onSubmit(finalUrl)
+  }
+
+  const handleDelete = async (e, siteUrl) => {
+    e.stopPropagation()
+    try {
+      await fetch(`http://localhost:3001/sites?url=${encodeURIComponent(siteUrl)}`, { method: 'DELETE' })
+      loadSites()
+    } catch (err) {
+      console.error('Failed to delete site:', err)
+    }
   }
 
   return (
@@ -71,28 +83,38 @@ export default function UrlInput({ onSubmit, onViewDashboard }) {
           <span>🌱 CO₂ impact</span>
         </div>
 
-        {/* Tracked sites */}
         {sites.length > 0 && (
           <div className="mt-16 w-full max-w-xl animate-fade-up stagger-5">
             <h3 className="text-[#5a6e5a] text-xs uppercase tracking-wider mb-3">Tracked sites</h3>
             <div className="space-y-2">
               {sites.map((site) => (
-                <button
+                <div
                   key={site.key}
-                  onClick={() => onViewDashboard(site.url)}
-                  className="w-full flex items-center justify-between bg-[#111a11] border border-[#1e2e1e] rounded-xl px-4 py-3 hover:border-[#2a3d2a] hover:bg-[#151f15] transition-all cursor-pointer text-left"
+                  className="flex items-center justify-between bg-[#111a11] border border-[#1e2e1e] rounded-xl px-4 py-3 hover:border-[#2a3d2a] hover:bg-[#151f15] transition-all"
                 >
-                  <div>
-                    <p className="text-[#c8e0c8] text-sm">{site.key}</p>
-                    <p className="text-[#4a5e4a] text-xs mt-0.5">{site.snapshotCount} snapshot{site.snapshotCount > 1 ? 's' : ''}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-medium ${site.latest.wastePercent > 30 ? 'text-[#d9735a]' : site.latest.wastePercent > 10 ? 'text-[#d4a843]' : 'text-[#7fba6a]'}`}>
-                      {site.latest.wastePercent}% waste
-                    </p>
-                    <p className="text-[#4a5e4a] text-xs">{formatBytes(site.latest.totalLoaded)}</p>
-                  </div>
-                </button>
+                  <button
+                    onClick={() => onViewDashboard(site.url)}
+                    className="flex-1 flex items-center justify-between cursor-pointer text-left"
+                  >
+                    <div>
+                      <p className="text-[#c8e0c8] text-sm">{site.key}</p>
+                      <p className="text-[#4a5e4a] text-xs mt-0.5">{site.snapshotCount} snapshot{site.snapshotCount > 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="text-right mr-4">
+                      <p className={`text-sm font-medium ${site.latest.wastePercent > 30 ? 'text-[#d9735a]' : site.latest.wastePercent > 10 ? 'text-[#d4a843]' : 'text-[#7fba6a]'}`}>
+                        {site.latest.wastePercent}% waste
+                      </p>
+                      <p className="text-[#4a5e4a] text-xs">{formatBytes(site.latest.totalLoaded)}</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, site.url)}
+                    className="text-[#4a5e4a] hover:text-[#d9735a] transition-colors cursor-pointer p-2 rounded-lg hover:bg-[#1a1515]"
+                    title="Remove site"
+                  >
+                    ✕
+                  </button>
+                </div>
               ))}
             </div>
           </div>
