@@ -29,7 +29,6 @@ function analyzeThirdParty(networkRequests, siteDomain) {
     byCategory[cat].domains.add(req.domain);
   });
 
-  // Convert sets to arrays
   for (const cat of Object.keys(byCategory)) {
     byCategory[cat].domains = Array.from(byCategory[cat].domains);
   }

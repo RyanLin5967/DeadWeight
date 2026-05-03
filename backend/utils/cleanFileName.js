@@ -62,18 +62,15 @@ function cleanFileName(url) {
   }
 }
 
-// Call this after cleaning all filenames to add numbers to duplicates
 function deduplicateNames(items, nameKey = 'fileName') {
   const counts = {};
   const seen = {};
 
-  // First pass — count occurrences
   items.forEach(item => {
     const name = item[nameKey];
     counts[name] = (counts[name] || 0) + 1;
   });
 
-  // Second pass — add numbers to duplicates
   items.forEach(item => {
     const name = item[nameKey];
     if (counts[name] > 1) {

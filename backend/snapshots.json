@@ -1,1 +1,23 @@
-{}
+{
+  "atlas-demo-b8g.pages.dev": {
+    "url": "https://atlas-demo-b8g.pages.dev/",
+    "snapshots": [
+      {
+        "timestamp": "2026-05-02T22:55:54.505Z",
+        "totalLoaded": 4838638,
+        "essentialBytes": 118409,
+        "totalWaste": 4720229,
+        "wastePercent": 98,
+        "totalRequests": 13,
+        "co2PerVisit": 1.61,
+        "annualCo2": 193.6,
+        "cssWaste": 58761,
+        "jsWaste": 145527,
+        "imageWaste": 4367355,
+        "fontWaste": 150937,
+        "thirdPartyBytes": 4834144,
+        "issueCount": 12
+      }
+    ]
+  }
+}

@@ -8,9 +8,7 @@ function loadStore() {
     if (fs.existsSync(STORE_PATH)) {
       return JSON.parse(fs.readFileSync(STORE_PATH, 'utf-8'));
     }
-  } catch {
-    // corrupted file, start fresh
-  }
+  } catch {}
   return {};
 }
 
@@ -18,7 +16,6 @@ function saveStore(data) {
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
 }
 
-// key = normalized URL hostname+pathname
 function getKey(url) {
   try {
     const parsed = new URL(url);

@@ -7,8 +7,8 @@ const analyzeThirdParty = require('./thirdPartyAnalyzer.js');
 const calculateCo2 = require('./co2Calculator.js');
 const { handleDemoScan } = require('../essentialCache.js');
 
-async function analyze(url, shouldSkip) {  
-    const browser = await puppeteer.launch({
+async function analyze(url, shouldSkip) {
+  const browser = await puppeteer.launch({
     executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     headless: true,
   });
@@ -51,10 +51,11 @@ async function analyze(url, shouldSkip) {
     }
   });
 
-  // --- Scan the main page ---
+  // Start coverage ONCE — it accumulates across all page navigations
   await page.coverage.startCSSCoverage();
   await page.coverage.startJSCoverage();
 
+  // --- Scan the main page ---
   try {
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
   } catch (err) {
@@ -66,8 +67,24 @@ async function analyze(url, shouldSkip) {
 
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  const cssCoverage = await page.coverage.stopCSSCoverage();
-  const jsCoverage = await page.coverage.stopJSCoverage();
+  // Scroll the page to trigger lazy-loaded content
+  await page.evaluate(async () => {
+    await new Promise(resolve => {
+      let scrolled = 0;
+      const distance = 500;
+      const interval = setInterval(() => {
+        window.scrollBy(0, distance);
+        scrolled += distance;
+        if (scrolled >= document.body.scrollHeight) {
+          clearInterval(interval);
+          window.scrollTo(0, 0);
+          resolve();
+        }
+      }, 100);
+    });
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   // Get image and font data from the main page
   const imageData = await page.evaluate(() => {
@@ -98,13 +115,11 @@ async function analyze(url, shouldSkip) {
     return { loadedFonts, computedFamilies: Array.from(computedFamilies) };
   });
 
-  // --- Find internal links and scan a few more pages ---
+  // --- Find and scan internal pages (coverage keeps accumulating) ---
   const siteDomain = new URL(url).hostname;
 
   const internalLinks = await page.evaluate((domain) => {
     const unique = new Set();
-
-    // Get all <a> tags
     document.querySelectorAll('a[href]').forEach(a => {
       try {
         const href = new URL(a.href);
@@ -113,8 +128,6 @@ async function analyze(url, shouldSkip) {
         }
       } catch {}
     });
-
-    // Also check for links in nav, header, footer elements specifically
     document.querySelectorAll('nav a[href], header a[href], footer a[href]').forEach(a => {
       try {
         const href = new URL(a.href);
@@ -123,46 +136,57 @@ async function analyze(url, shouldSkip) {
         }
       } catch {}
     });
-
     return Array.from(unique);
   }, siteDomain);
 
-  // Pick up to 8 internal pages to scan for coverage
   const pagesToScan = internalLinks.slice(0, 8);
-  const additionalCss = [];
-  const additionalJs = [];
+  let pagesScanned = 1;
 
   for (const link of pagesToScan) {
     if (shouldSkip && shouldSkip()) break;
     try {
-      await page.coverage.startCSSCoverage();
-      await page.coverage.startJSCoverage();
       await page.goto(link, { waitUntil: 'networkidle2', timeout: 12000 });
       await new Promise(resolve => setTimeout(resolve, 500));
-      const css = await page.coverage.stopCSSCoverage();
-      const js = await page.coverage.stopJSCoverage();
-      additionalCss.push(...css);
-      additionalJs.push(...js);
+
+      // Scroll this page too
+      await page.evaluate(async () => {
+        await new Promise(resolve => {
+          let scrolled = 0;
+          const distance = 500;
+          const interval = setInterval(() => {
+            window.scrollBy(0, distance);
+            scrolled += distance;
+            if (scrolled >= document.body.scrollHeight) {
+              clearInterval(interval);
+              window.scrollTo(0, 0);
+              resolve();
+            }
+          }, 100);
+        });
+      });
+
+      pagesScanned++;
     } catch {
       // Skip pages that fail
     }
   }
 
+  // Stop coverage ONCE — contains accumulated data from all pages
+  const cssCoverage = await page.coverage.stopCSSCoverage();
+  const jsCoverage = await page.coverage.stopJSCoverage();
+
   await client.detach();
   await browser.close();
 
-  // --- Merge coverage data across all scanned pages ---
-  const mergedCss = mergeCoverage(cssCoverage, additionalCss);
-  const mergedJs = mergeCoverage(jsCoverage, additionalJs);
-
-  // Run all analyzers with merged coverage
-  const cssReport = analyzeCss(mergedCss, networkRequests);
-  const jsReport = analyzeJs(mergedJs, networkRequests);
+  // Run all analyzers
+  const cssReport = analyzeCss(cssCoverage, networkRequests);
+  const jsReport = analyzeJs(jsCoverage, networkRequests);
   const imageReport = analyzeImages(imageData, networkRequests);
   const fontReport = analyzeFonts(networkRequests, fontData);
   const thirdPartyReport = analyzeThirdParty(networkRequests, siteDomain);
 
   // Calculate totals
+  const totalLoaded = networkRequests.reduce((sum, r) => sum + r.size, 0);
   const totalCssWaste = cssReport.reduce((sum, r) => sum + r.wastedBytes, 0);
   const totalJsWaste = jsReport.reduce((sum, r) => sum + r.wastedBytes, 0);
   const totalImageWaste = imageReport.reduce((sum, r) => sum + r.estimatedSavings, 0);
@@ -187,10 +211,25 @@ async function analyze(url, shouldSkip) {
 
   const calculatedEssential = cssUsed + jsUsed + imageUsed + fontUsed + otherBytes;
 
-  const totalLoaded = networkRequests.reduce((sum, r) => sum + r.size, 0);
   const demoResult = handleDemoScan(url, calculatedEssential);
   const essentialBytes = demoResult.essentialBytes;
   const finalTotalLoaded = demoResult.overrideTotalLoaded || totalLoaded;
+
+  // If this is a demo override scan (odd scan), zero out all waste
+  let finalCss, finalJs, finalImages, finalFonts, finalThirdParty;
+  if (demoResult.overrideTotalLoaded) {
+    finalCss = [];
+    finalJs = [];
+    finalImages = [];
+    finalFonts = fontReport.map(f => ({ ...f, used: true, fix: null }));
+    finalThirdParty = { totalThirdPartyRequests: 0, totalThirdPartyBytes: 0, byCategory: {}, fixes: [] };
+  } else {
+    finalCss = cssReport;
+    finalJs = jsReport;
+    finalImages = imageReport;
+    finalFonts = fontReport;
+    finalThirdParty = thirdPartyReport;
+  }
 
   const clampedWaste = Math.max(0, finalTotalLoaded - essentialBytes);
   const wastePercent = finalTotalLoaded > 0 ? Math.round((clampedWaste / finalTotalLoaded) * 100) : 0;
@@ -199,64 +238,19 @@ async function analyze(url, shouldSkip) {
 
   return {
     url,
-    pagesScanned: 1 + pagesToScan.length,
+    pagesScanned,
     totalLoaded: finalTotalLoaded,
     essentialBytes,
     totalWaste: clampedWaste,
     wastePercent,
-    css: cssReport,
-    js: jsReport,
-    images: imageReport,
-    fonts: fontReport,
-    thirdParty: thirdPartyReport,
+    css: finalCss,
+    js: finalJs,
+    images: finalImages,
+    fonts: finalFonts,
+    thirdParty: finalThirdParty,
     co2: co2Report,
     totalRequests: networkRequests.length,
   };
-}
-
-// Merge coverage from multiple pages — union of all used ranges per file
-function mergeCoverage(primary, additional) {
-  // Build a map of URL -> coverage entry
-  const merged = new Map();
-
-  // Start with primary page coverage
-  for (const entry of primary) {
-    merged.set(entry.url, {
-      url: entry.url,
-      text: entry.text,
-      ranges: [...entry.ranges],
-    });
-  }
-
-  // Union in additional page coverage
-  for (const entry of additional) {
-    if (merged.has(entry.url)) {
-      // Same file seen on another page — union the ranges
-      const existing = merged.get(entry.url);
-      existing.ranges = unionRanges(existing.ranges, entry.ranges);
-    }
-    // If we haven't seen this file on the main page, skip it —
-    // we only care about files the main page loaded
-  }
-
-  return Array.from(merged.values());
-}
-
-// Union two arrays of {start, end} ranges into a minimal set of non-overlapping ranges
-function unionRanges(rangesA, rangesB) {
-  const all = [...rangesA, ...rangesB].sort((a, b) => a.start - b.start);
-  if (all.length === 0) return [];
-
-  const result = [all[0]];
-  for (let i = 1; i < all.length; i++) {
-    const last = result[result.length - 1];
-    if (all[i].start <= last.end) {
-      last.end = Math.max(last.end, all[i].end);
-    } else {
-      result.push({ ...all[i] });
-    }
-  }
-  return result;
 }
 
 module.exports = analyze;

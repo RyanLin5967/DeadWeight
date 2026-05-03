@@ -8,7 +8,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Global skip flag
 let skipFlag = false;
 
 app.post('/analyze', async (req, res) => {

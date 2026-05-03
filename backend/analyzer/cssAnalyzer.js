@@ -19,8 +19,6 @@ function analyzeCss(cssCoverage, networkRequests) {
     const networkEntry = networkRequests.find(r => r.url === entry.url);
     const transferSize = networkEntry ? networkEntry.size : uncompressedTotal;
 
-    // If over 90% unused, count the entire file as waste
-    // The "used" portion is just browser parsing overhead, not actual needed code
     const effectiveWastedPercent = wastedPercent > 0.9 ? 1 : wastedPercent;
 
     const totalBytes = transferSize;

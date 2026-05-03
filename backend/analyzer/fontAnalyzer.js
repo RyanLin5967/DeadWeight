@@ -7,7 +7,6 @@ function analyzeFonts(networkRequests, fontData) {
     const url = r.url.toLowerCase();
     const contentType = r.contentType.toLowerCase();
 
-    // Must be an actual font file, not a CSS file that mentions fonts
     if (contentType.includes('css') || url.endsWith('.css')) return false;
     if (contentType.includes('javascript') || url.endsWith('.js')) return false;
 
@@ -29,7 +28,6 @@ function analyzeFonts(networkRequests, fontData) {
 
   const results = fontFiles.map(font => {
     const fileName = cleanFileName(font.url);
-    // Normalize URL — remove hyphens and spaces for matching
     const urlNormalized = font.url.toLowerCase().replace(/[-_\s]/g, '');
 
     const matchesRendered = renderedFamilies.some(family => {
@@ -48,7 +46,6 @@ function analyzeFonts(networkRequests, fontData) {
     } else if (matchesUnrendered) {
       used = false;
     } else {
-      // Can't determine — assume used
       used = true;
     }
 
